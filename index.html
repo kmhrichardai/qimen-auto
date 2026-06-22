@@ -89,7 +89,17 @@
         <label><input type="checkbox" id="useTimeInfo" checked onchange="toggleTimeInput(); updatePreview()"><div class="btn-check">加入開盤時間與四柱</div></label>
     </div>
     <div id="timeInputGroup" style="display:block; margin-bottom: 15px;">
-        <input type="datetime-local" id="qimenDateTime" class="datetime-input" onchange="updatePreview()">
+        
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
+            <input type="date" id="qimenDate" class="datetime-input" style="flex: 2; margin-top: 0;" onchange="updatePreview()">
+            
+            <input type="number" id="qimenHour" class="datetime-input" min="0" max="23" placeholder="00" style="flex: 1; margin-top: 0; text-align: center; padding-right: 12px;" onchange="validateAndPadTime(this, 23); updatePreview()">
+            <span style="font-weight: bold; color: #3a3a3c; margin: 0 2px;">時</span>
+            
+            <input type="number" id="qimenMinute" class="datetime-input" min="0" max="59" placeholder="00" style="flex: 1; margin-top: 0; text-align: center; padding-right: 12px;" onchange="validateAndPadTime(this, 59); updatePreview()">
+            <span style="font-weight: bold; color: #3a3a3c; margin: 0 2px;">分</span>
+        </div>
+
         <button class="auto-plot-btn" onclick="autoPlotAndFill()">⚡ 自動排盤 & 帶入所問事</button>
         <div style="font-size:12px; color:#8e8e93; margin-top:6px;">系統將依據此時間與選擇主題，自動推算陰盤全盤並標註用神。</div>
     </div>
@@ -165,7 +175,9 @@ const topics = {
     "健康疾病 (芮/心/乙)": ["日干 (求測者/病人)", "時干 (疾病結局)", "天芮星 (病灶部位)", "天心星 (西醫技術)", "乙奇 (中醫療法)"],
     "求學考試 (輔/景/丁)": ["日干 (求測者/考生)", "時干 (考試結局)", "天輔星 (學校考官)", "景門 (試卷成績)", "丁奇 (錄取通知)"],
     "官非訴訟 (符/乙/開)": ["日干 (求測者)", "時干 (訴訟結局)", "值符 (原告方)", "天乙 (被告方)", "開門 (法官法院)", "驚門 (律師訴訟)"],
-    "出行尋物 (綜合)": ["日干 (求測者)", "時干 (目的地/失物)", "六合 (方向/失蹤者)", "傷門 (交通車輛)"]
+    "出行尋物 (綜合)": ["日干 (求測者)", "時干 (目的地/失物)", "六合 (方向/失蹤者)", "傷門 (交通車輛)"],
+    // 新增：全盤解析主題
+    "全盤解析 (九宮全覽)": ["坎一宮(水)", "坤二宮(土)", "震三宮(木)", "巽四宮(木)", "乾六宮(金)", "兌七宮(金)", "艮八宮(土)", "離九宮(火)"]
 };
 
 const dropdownPalaces = ["坎一宮(水)", "坤二宮(土)", "震三宮(木)", "巽四宮(木)", "乾六宮(金)", "兌七宮(金)", "艮八宮(土)", "離九宮(火)"];
@@ -201,6 +213,22 @@ function isTomb(palaceNum, stem) { return tombMap[palaceNum] && tombMap[palaceNu
 function isXing(palaceNum, stem) { return xingMap[palaceNum] && xingMap[palaceNum].includes(stem); }
 function isMenPo(door, palaceNum) { return elementConstrains[doorElements[door]] === palaceElements[palaceNum]; }
 
+// 數字輸入防呆與自動補零
+function validateAndPadTime(input, maxVal) {
+    if (input.value === "") {
+        input.value = "00";
+        return;
+    }
+    let val = parseInt(input.value, 10);
+    if (isNaN(val)) {
+        input.value = "00";
+    } else {
+        if (val < 0) val = 0;
+        if (val > maxVal) val = maxVal;
+        input.value = String(val).padStart(2, '0');
+    }
+}
+
 // 初始化時間輸入框為當前時間
 function initDateTime() {
     let now = new Date();
@@ -209,7 +237,10 @@ function initDateTime() {
     let day = String(now.getDate()).padStart(2, '0');
     let hours = String(now.getHours()).padStart(2, '0');
     let minutes = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById("qimenDateTime").value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    document.getElementById("qimenDate").value = `${year}-${month}-${day}`;
+    document.getElementById("qimenHour").value = hours;
+    document.getElementById("qimenMinute").value = minutes;
 }
 
 function toggleTimeInput() {
@@ -220,21 +251,38 @@ function toggleTimeInput() {
 // 產生農曆與八字排盤字串
 function getCalculatedTimeInfo() {
     if (!document.getElementById("useTimeInfo").checked) return "";
-    let dtVal = document.getElementById("qimenDateTime").value;
-    if (!dtVal) return "";
+    
+    let dVal = document.getElementById("qimenDate").value;
+    let hVal = document.getElementById("qimenHour").value;
+    let mVal = document.getElementById("qimenMinute").value;
+    if (!dVal || !hVal || !mVal) return "";
 
     try {
-        let date = new Date(dtVal);
+        let parts = dVal.split('-');
+        let date = new Date(parts[0], parts[1] - 1, parts[2], hVal, mVal);
         let solar = Solar.fromDate(date);
         let lunar = solar.getLunar();
 
         let week = lunar.getWeekInChinese();
         let gregStr = `${solar.getYear()}-${String(solar.getMonth()).padStart(2,'0')}-${String(solar.getDay()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')} 星期${week}`;
         
-        let lunarStr = `${lunar.getYearInChinese()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} ${lunar.getTimeZhi()}時`;
+        let isLateZi = date.getHours() >= 23;
+        let timeZhiStr = lunar.getTimeZhi() + "時";
+        if (isLateZi) timeZhiStr = "晚子時";
+        
+        let lunarStr = `${lunar.getYearInChinese()}年 ${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} ${timeZhiStr}`;
         
         let bazi = lunar.getEightChar();
-        let baziStr = `${bazi.getYear()}年 ${bazi.getMonth()}月 ${bazi.getDay()}日 ${bazi.getTime()}時`;
+        let baziDay = bazi.getDay();
+        
+        // 修正晚子時：強制獲取下一日的日柱，以符合奇門排盤標準
+        if (isLateZi) {
+            let nextDay = new Date(date.getTime() + 2 * 60 * 60 * 1000);
+            let nextLunar = Solar.fromDate(nextDay).getLunar();
+            baziDay = nextLunar.getEightChar().getDay();
+        }
+        
+        let baziStr = `${bazi.getYear()}年 ${bazi.getMonth()}月 ${baziDay}日 ${bazi.getTime()}時`;
 
         let prevJieQi = lunar.getPrevJieQi(true);
         let nextJieQi = lunar.getNextJieQi(true);
@@ -258,20 +306,25 @@ function autoPlotAndFill() {
         toggleTimeInput();
     }
 
-    let dtVal = document.getElementById("qimenDateTime").value;
-    if (!dtVal) return alert("請先選擇開盤時間！");
+    let dVal = document.getElementById("qimenDate").value;
+    let hVal = document.getElementById("qimenHour").value;
+    let mVal = document.getElementById("qimenMinute").value;
+    if (!dVal || !hVal || !mVal) return alert("請先選擇完整的開盤日期與時間！");
 
-    let date = new Date(dtVal);
+    let parts = dVal.split('-');
+    let date = new Date(parts[0], parts[1] - 1, parts[2], hVal, mVal);
     let solar = Solar.fromDate(date);
     let lunar = solar.getLunar();
     let bazi = lunar.getEightChar();
+    
+    let isLateZi = date.getHours() >= 23;
 
     // 1. 判斷陰陽遁
     const yangJieQi = ["冬至", "小寒", "大寒", "立春", "雨水", "惊蛰", "驚蟄", "春分", "清明", "谷雨", "穀雨", "立夏", "小满", "小滿", "芒种", "芒種"];
     let jqName = lunar.getPrevJieQi(true).getName();
     let dunType = yangJieQi.includes(jqName) ? "yang" : "yin";
 
-    // 2. 計算局數 (年支+月數+日數+時支) % 9
+    // 2. 計算局數
     const zhiArr = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
     let yearZhiNum = zhiArr.indexOf(lunar.getYearZhi()) + 1;
     let monthNum = lunar.getMonth(); // 1-12
@@ -284,7 +337,7 @@ function autoPlotAndFill() {
     document.getElementById("dunType").value = dunType;
     document.getElementById("juNum").value = juNum;
 
-    // 3. 排地盤 (區分出純淨無寄宮的地盤 diPanRaw，以修正暗干錯抓問題)
+    // 3. 排地盤 
     let diPanRaw = {};
     let currentP = juNum;
     for (let i = 0; i < 9; i++) {
@@ -296,7 +349,6 @@ function autoPlotAndFill() {
         }
     }
     
-    // diPan 用於畫面展示（中宮寄坤二宮）
     let diPan = {};
     for (let i = 1; i <= 9; i++) {
         diPan[i] = diPanRaw[i];
@@ -311,6 +363,7 @@ function autoPlotAndFill() {
                        "甲辰","乙巳","丙午","丁未","戊申","己酉","庚戌","辛亥","壬子","癸丑",
                        "甲寅","乙卯","丙辰","丁巳","戊午","己未","庚申","辛酉","壬戌","癸亥"];
     const xunShouMap = {0:"戊", 10:"己", 20:"庚", 30:"辛", 40:"壬", 50:"癸"};
+    
     let hGanZhi = bazi.getTime();
     let idx = jiaZiList.indexOf(hGanZhi);
     let xunIdx = Math.floor(idx / 10) * 10;
@@ -326,7 +379,7 @@ function autoPlotAndFill() {
     const baseStars = {1:"天蓬星", 2:"天芮禽星", 3:"天沖星", 4:"天輔星", 6:"天心星", 7:"天柱星", 8:"天任星", 9:"天英星"};
     const baseDoors = {1:"休門", 2:"死門", 3:"傷門", 4:"杜門", 6:"開門", 7:"驚門", 8:"生門", 9:"景門"};
 
-    // 5. 天盤排布 (星門干流轉)
+    // 5. 天盤排布 (星隨時干，門隨時支)
     let hGan = bazi.getTimeGan();
     let searchGan = hGan === "甲" ? xunShouGan : hGan;
     let targetPalace = 0;
@@ -338,21 +391,45 @@ function autoPlotAndFill() {
 
     const ring = [1, 8, 3, 4, 9, 2, 7, 6]; 
     let zhiFuOriginalIdx = ring.indexOf(zhiFuPalace);
+    
     let targetIdx = ring.indexOf(targetPalace);
     let shift = (targetIdx - zhiFuOriginalIdx + 8) % 8;
 
+    let hZhiIdx = zhiArr.indexOf(bazi.getTimeZhi()); 
+    let xunZhiIdx = zhiArr.indexOf(jiaZiList[xunIdx].substring(1)); 
+    let steps = hZhiIdx - xunZhiIdx;
+    if (steps < 0) steps += 12;
+
+    let zhiShiTargetPalace = zhiFuPalace;
+    if (dunType === 'yang') {
+        zhiShiTargetPalace = (zhiFuPalace + steps) % 9;
+        if (zhiShiTargetPalace === 0) zhiShiTargetPalace = 9;
+    } else {
+        zhiShiTargetPalace = (zhiFuPalace - steps) % 9;
+        while (zhiShiTargetPalace <= 0) zhiShiTargetPalace += 9;
+    }
+    if (zhiShiTargetPalace === 5) zhiShiTargetPalace = 2; 
+    
+    let zhiShiTargetIdx = ring.indexOf(zhiShiTargetPalace);
+    let doorShift = (zhiShiTargetIdx - zhiFuOriginalIdx + 8) % 8;
+
     let tianPan = {};
-    for (let i = 0; i < 8; i++) {
-        let originalP = ring[i];
-        let newP = ring[(i + shift) % 8];
-        tianPan[newP] = {
-            star: baseStars[originalP],
-            door: baseDoors[originalP], 
-            gan: diPan[originalP] 
-        };
+    for (let i = 1; i <= 9; i++) {
+        if (i !== 5) tianPan[i] = {}; 
     }
 
-    // 6. 天盤八神 (陰/陽遁)
+    for (let i = 0; i < 8; i++) {
+        let originalP = ring[i];
+        
+        let newStarP = ring[(i + shift) % 8];
+        tianPan[newStarP].star = baseStars[originalP];
+        tianPan[newStarP].gan = diPan[originalP]; // 生成的格式如 "庚/乙"，排在前面的為首干
+        
+        let newDoorP = ring[(i + doorShift) % 8];
+        tianPan[newDoorP].door = baseDoors[originalP];
+    }
+
+    // 6. 天盤八神 
     const godList = ["值符", "騰蛇", "太陰", "六合", "白虎", "玄武", "九地", "九天"];
     for (let i = 0; i < 8; i++) {
         let godPalaceIdx = dunType === 'yang' ? (targetIdx + i) % 8 : (targetIdx - i + 8) % 8;
@@ -373,61 +450,107 @@ function autoPlotAndFill() {
     let kwPalaces = kwIndices.map(z => zhiPalaceMap[z]);
 
     let maZhiIdx = 0;
-    let hZhiIdx = zhiArr.indexOf(bazi.getTimeZhi()) + 1;
-    if([9,1,5].includes(hZhiIdx)) maZhiIdx = 3; 
-    if([3,7,11].includes(hZhiIdx)) maZhiIdx = 9; 
-    if([12,4,8].includes(hZhiIdx)) maZhiIdx = 6; 
-    if([6,10,2].includes(hZhiIdx)) maZhiIdx = 12; 
+    if([9,1,5].includes(hourZhiNum)) maZhiIdx = 3; 
+    if([3,7,11].includes(hourZhiNum)) maZhiIdx = 9; 
+    if([12,4,8].includes(hourZhiNum)) maZhiIdx = 6; 
+    if([6,10,2].includes(hourZhiNum)) maZhiIdx = 12; 
     let maPalace = zhiPalaceMap[maZhiIdx];
 
-    // 8. 陰盤暗干 (門家地盤干 - 修正：依循原始地盤推算，並僅於坤二宮落位時加入寄宮干)
+    // 8. 陰盤暗干 
     const doorHome = {"休門":1, "死門":2, "傷門":3, "杜門":4, "開門":6, "驚門":7, "生門":8, "景門":9};
     for (let p = 1; p <= 9; p++) {
         if (p === 5) continue;
         let homeP = doorHome[tianPan[p].door];
-        let ag = diPanRaw[homeP]; // 使用未合體的純淨版地盤
+        let ag = diPanRaw[homeP];
         if (p === 2) {
-            ag += "/" + diPanRaw[5]; // 唯獨當前落宮為坤二宮時，才將中宮干納入暗干
+            ag += "/" + diPanRaw[5];
         }
         tianPan[p].anGan = ag;
     }
 
-    // 儲存全域盤面資訊
     window.computedPan = { kw: kwPalaces, ma: maPalace, diPan: diPan, tianPan: tianPan };
 
-    // ====== 9. 智能帶入「所問事」表單 ======
     renderPanels(); 
 
     let dGan = bazi.getDayGan();
+    let dGanZhi = bazi.getDay();
+    
+    if (isLateZi) {
+        let nextDay = new Date(date.getTime() + 2 * 60 * 60 * 1000);
+        let nextBazi = Solar.fromDate(nextDay).getLunar().getEightChar();
+        dGan = nextBazi.getDayGan();
+        dGanZhi = nextBazi.getDay();
+    }
+    
+    let dIdx = jiaZiList.indexOf(dGanZhi);
+    let dXunIdx = Math.floor(dIdx / 10) * 10;
+    let dXunShouGan = xunShouMap[dXunIdx];
+
     const palaceNames = {1:"坎一宮(水)", 2:"坤二宮(土)", 3:"震三宮(木)", 4:"巽四宮(木)", 6:"乾六宮(金)", 7:"兌七宮(金)", 8:"艮八宮(土)", 9:"離九宮(火)"};
+    const palaceNameToNum = {"坎一宮(水)":1, "坤二宮(土)":2, "震三宮(木)":3, "巽四宮(木)":4, "乾六宮(金)":6, "兌七宮(金)":7, "艮八宮(土)":8, "離九宮(火)":9};
 
     document.querySelectorAll('.panel').forEach((p, idx) => {
         if(!p.dataset.godname) return;
         let ysName = p.dataset.godname;
         let target = "";
-        
-        if(ysName.includes("日干")) target = dGan;
-        else if(ysName.includes("時干")) target = hGan;
-        else if(ysName.includes("乙奇")) target = "乙";
-        else if(ysName.includes("丁奇")) target = "丁";
-        else if(ysName.includes("庚")) target = "庚";
-        else if(ysName.includes("戊")) target = "戊";
-        else target = ysName.split(" ")[0]; 
-
         let pNum = 0;
-        for (let i = 1; i <= 9; i++) {
-            if (i === 5) continue;
-            let cell = tianPan[i];
-            if (cell.gan.includes(target) || cell.door.includes(target) || cell.star.includes(target) || cell.god.includes(target) || cell.diGod.includes(target)) {
-                pNum = i; break;
+        
+        // 若為全盤解析，直接對應宮位名稱
+        if (palaceNameToNum[ysName]) {
+            pNum = palaceNameToNum[ysName];
+        } else {
+            if(ysName.includes("日干")) {
+                target = (dGan === "甲") ? dXunShouGan : dGan;
+            } else if(ysName.includes("時干")) {
+                target = (hGan === "甲") ? xunShouGan : hGan;
+            } else if(ysName.includes("乙奇")) target = "乙";
+            else if(ysName.includes("丁奇")) target = "丁";
+            else if(ysName.includes("庚")) target = "庚";
+            else if(ysName.includes("戊")) target = "戊";
+            else target = ysName.split(" ")[0]; 
+
+            // 優先搜尋「天盤」用神 (包含天盤干、門、星、天盤八神)
+            for (let i = 1; i <= 9; i++) {
+                if (i === 5) continue;
+                let cell = tianPan[i];
+                if (cell.gan.includes(target) || cell.door.includes(target) || cell.star.includes(target) || cell.god.includes(target)) {
+                    pNum = i; break;
+                }
+            }
+            
+            // 若天盤找不到，才作為保底搜尋「地盤」用神 (地盤干、地盤八神)
+            if (pNum === 0) {
+                for (let i = 1; i <= 9; i++) {
+                    if (i === 5) continue;
+                    let cell = tianPan[i];
+                    if (diPan[i].includes(target) || cell.diGod.includes(target)) {
+                        pNum = i; break;
+                    }
+                }
             }
         }
 
         if(pNum) {
-            // 自動選定宮位
             p.querySelector('.palace-sel').value = palaceNames[pNum];
 
-            const setCb = (selector, valArr) => { p.querySelectorAll(selector).forEach(cb => cb.checked = valArr.includes(cb.value)); };
+            if (ysName.includes("日干") && dGan === "甲") p.querySelector('.jia-sel').value = dXunShouGan;
+            if (ysName.includes("時干") && hGan === "甲") p.querySelector('.jia-sel').value = xunShouGan;
+
+            // 取代傳統的 DOM 排序勾選，改用自定義的時序勾選函式，確保首干次干不顛倒
+            const setCbOrdered = (selector, valArr) => {
+                p.querySelectorAll(selector).forEach(cb => {
+                    cb.checked = false;
+                    cb.removeAttribute('data-order');
+                });
+                valArr.forEach((val, index) => {
+                    let cb = p.querySelector(`${selector}[value="${val}"]`);
+                    if(cb) {
+                        cb.checked = true;
+                        cb.dataset.order = index; // 寫入順序，確保引擎抓出來的排在第一位(0)為首干
+                    }
+                });
+            };
+
             const setRb = (name, val) => {
                 let rb = p.querySelector(`input[name="${name}"][value="${val}"]`);
                 if(rb) { rb.checked = true; rb.dataset.checked = "true"; }
@@ -436,25 +559,22 @@ function autoPlotAndFill() {
             let tGans = tianPan[pNum].gan.split("/");
             let dGans = diPan[pNum].split("/");
 
-            setCb('.tian-gan', tGans);
-            setCb('.di-gan', dGans);
-            setCb(`input[name="ag_${idx}"]`, tianPan[pNum].anGan.split("/"));
+            setCbOrdered('.tian-gan', tGans);
+            setCbOrdered('.di-gan', dGans);
+            setCbOrdered(`input[name="ag_${idx}"]`, tianPan[pNum].anGan.split("/"));
             
             setRb(`tg_${idx}`, tianPan[pNum].god);
             setRb(`dg_${idx}`, tianPan[pNum].diGod);
             setRb(`star_${idx}`, tianPan[pNum].star);
             setRb(`door_${idx}`, tianPan[pNum].door);
 
-            // 自動勾選：門迫
             if(p.querySelector('.door-mp')) p.querySelector('.door-mp').checked = isMenPo(tianPan[pNum].door, pNum);
 
-            // 自動勾選：擊刑與入墓 (僅限天盤動干，確保地盤維持不勾選)
             if(p.querySelector('.tian-jx-1')) p.querySelector('.tian-jx-1').checked = tGans[0] ? isXing(pNum, tGans[0]) : false;
             if(p.querySelector('.tian-rm-1')) p.querySelector('.tian-rm-1').checked = tGans[0] ? isTomb(pNum, tGans[0]) : false;
             if(p.querySelector('.tian-jx-2')) p.querySelector('.tian-jx-2').checked = tGans[1] ? isXing(pNum, tGans[1]) : false;
             if(p.querySelector('.tian-rm-2')) p.querySelector('.tian-rm-2').checked = tGans[1] ? isTomb(pNum, tGans[1]) : false;
 
-            // 清除地盤勾選，防止誤導 (地盤屬靜，無須論擊刑入墓)
             if(p.querySelector('.di-jx-1')) p.querySelector('.di-jx-1').checked = false;
             if(p.querySelector('.di-rm-1')) p.querySelector('.di-rm-1').checked = false;
             if(p.querySelector('.di-jx-2')) p.querySelector('.di-jx-2').checked = false;
@@ -528,8 +648,10 @@ function autoCalcAnGan(idx) {
     anGanCbs.forEach(cb => {
         if (cb.value === autoGan || cb.value === autoGan2) {
             cb.checked = true;
+            cb.dataset.order = 0;
         } else {
             cb.checked = false;
+            cb.removeAttribute('data-order');
         }
     });
 }
@@ -589,7 +711,7 @@ function renderPanels() {
 
         let html = `
         <div class="panel-header">
-            <h3 class="panel-title">用神：${godName}</h3>
+            <h3 class="panel-title">${dropdownPalaces.includes(godName) ? godName : '用神：' + godName}</h3>
             <div class="copy-tool">
                 <div class="select-container">
                     <select onchange="copyPanelData(${idx}, this.value); this.value='';">
@@ -680,35 +802,63 @@ function copyPanelData(targetIdx, sourceIdx) {
     
     copyRadio('tg'); copyRadio('star'); copyRadio('door'); copyRadio('dg');
 
-    targetPanel.querySelectorAll('.tian-gan').forEach((cb, i) => { cb.checked = sourcePanel.querySelectorAll('.tian-gan')[i].checked; });
+    targetPanel.querySelectorAll('.tian-gan').forEach((cb, i) => { 
+        let sourceCb = sourcePanel.querySelectorAll('.tian-gan')[i];
+        cb.checked = sourceCb.checked; 
+        if(sourceCb.hasAttribute('data-order')) cb.dataset.order = sourceCb.dataset.order;
+        else cb.removeAttribute('data-order');
+    });
+    
     ['tian-jx-1', 'tian-rm-1', 'tian-jx-2', 'tian-rm-2', 'di-jx-1', 'di-rm-1', 'di-jx-2', 'di-rm-2', 'door-mp', 'spec-kw', 'spec-mx'].forEach(cls => {
         targetPanel.querySelector('.' + cls).checked = sourcePanel.querySelector('.' + cls).checked;
     });
 
-    targetPanel.querySelectorAll('.di-gan').forEach((cb, i) => { cb.checked = sourcePanel.querySelectorAll('.di-gan')[i].checked; });
+    targetPanel.querySelectorAll('.di-gan').forEach((cb, i) => { 
+        let sourceCb = sourcePanel.querySelectorAll('.di-gan')[i];
+        cb.checked = sourceCb.checked; 
+        if(sourceCb.hasAttribute('data-order')) cb.dataset.order = sourceCb.dataset.order;
+        else cb.removeAttribute('data-order');
+    });
 
+    targetPanel.querySelectorAll(`input[name="ag_${targetIdx}"]`).forEach(cb => {
+        cb.checked = false;
+        cb.removeAttribute('data-order');
+    });
+    
     const sourceAgs = sourcePanel.querySelectorAll(`input[name="ag_${sourceIdx}"]:checked`);
-    targetPanel.querySelectorAll(`input[name="ag_${targetIdx}"]`).forEach(cb => cb.checked = false);
     sourceAgs.forEach(sCb => {
         let tCb = targetPanel.querySelector(`input[name="ag_${targetIdx}"][value="${sCb.value}"]`);
-        if(tCb) tCb.checked = true;
+        if(tCb) {
+            tCb.checked = true;
+            if(sCb.hasAttribute('data-order')) tCb.dataset.order = sCb.dataset.order;
+        }
     });
 
     updatePreview();
 }
 
+// 核心修正：追蹤並寫入按鈕點擊的時間順序
 function checkLimit(cb, className) {
     let panel = cb.closest('.panel');
     let checked = panel.querySelectorAll(`.${className}:checked`);
     if(checked.length > 2) {
         cb.checked = false;
+    } else {
+        if (cb.checked) {
+            cb.dataset.order = Date.now(); // 寫入點擊時間戳記
+        } else {
+            cb.removeAttribute('data-order');
+        }
     }
     updatePreview();
 }
 
 function clearAllSelections() {
     window.computedPan = null; 
-    document.querySelectorAll('.panel input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.panel input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+        cb.removeAttribute('data-order');
+    });
     document.querySelectorAll('.panel input[type="radio"]').forEach(rb => { rb.checked = false; rb.dataset.checked = "false"; });
     document.querySelectorAll('.panel .palace-sel, .panel .jia-sel').forEach(sel => sel.selectedIndex = 0);
     updatePreview();
@@ -735,13 +885,27 @@ function getOutputString() {
 
         let lines = [];
         let curPalace = p.querySelector('.palace-sel').value;
-        lines.push(`[用神 : ${p.dataset.godname}]`);
-        lines.push(`宮位 : ${curPalace}`);
+        
+        // 判斷是否為全盤解析，簡化標題輸出
+        if (dropdownPalaces.includes(p.dataset.godname)) {
+            lines.push(`[ ${p.dataset.godname} ]`);
+            // 若使用者手動改了宮位，才特別提示
+            if (curPalace !== p.dataset.godname) {
+                lines.push(`宮位 : ${curPalace}`);
+            }
+        } else {
+            lines.push(`[用神 : ${p.dataset.godname}]`);
+            lines.push(`宮位 : ${curPalace}`);
+        }
         
         let tGod = p.querySelector(`input[name="tg_${idx}"]:checked`);
         if(tGod) lines.push(`天盤八神 : ${tGod.value}`);
 
-        let tGans = Array.from(p.querySelectorAll('.tian-gan:checked')).map(x=>x.value);
+        // 取出天干，依據 data-order 順序排列（首干在前、次干在後）
+        let tGans = Array.from(p.querySelectorAll('.tian-gan:checked'))
+                         .sort((a, b) => (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0))
+                         .map(x=>x.value);
+                         
         let jiaVal = p.querySelector('.jia-sel').value;
         let jiaText = p.querySelector('.jia-sel').options[p.querySelector('.jia-sel').selectedIndex].text;
         let jiaStr = jiaVal ? ` (${jiaText}旬首)` : "";
@@ -775,12 +939,17 @@ function getOutputString() {
             lines.push(`天盤甲藏 : ${jiaStr.trim()}${csJiaStr}${tHarm1Str}`);
         }
 
-        let anGanCbs = Array.from(p.querySelectorAll(`input[name="ag_${idx}"]:checked`)).map(x=>x.value);
+        let anGanCbs = Array.from(p.querySelectorAll(`input[name="ag_${idx}"]:checked`))
+                            .sort((a, b) => (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0))
+                            .map(x=>x.value);
         if (showAG && anGanCbs.length > 0) {
             lines.push(`暗干 : ${anGanCbs.join(" + ")}`);
         }
 
-        let dGans = Array.from(p.querySelectorAll('.di-gan:checked')).map(x=>x.value);
+        let dGans = Array.from(p.querySelectorAll('.di-gan:checked'))
+                         .sort((a, b) => (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0))
+                         .map(x=>x.value);
+                         
         let dHarm1Arr = [];
         if(p.querySelector('.di-jx-1') && p.querySelector('.di-jx-1').checked) dHarm1Arr.push("擊刑");
         if(p.querySelector('.di-rm-1') && p.querySelector('.di-rm-1').checked) dHarm1Arr.push("入墓");
@@ -834,7 +1003,6 @@ function updatePreview() {
     const previewBox = document.getElementById("previewArea");
     if(previewBox) previewBox.value = getOutputString();
 
-    // 清空現有單元格內容
     allPalaces.forEach(pName => {
         const cell = document.getElementById("cell_" + pName);
         if(cell) {
@@ -846,7 +1014,6 @@ function updatePreview() {
         }
     });
 
-    // 1. 若有自動排盤的全盤資訊，先繪製淡淡的全盤底圖
     if (window.computedPan) {
         let {kw, ma, diPan, tianPan} = window.computedPan;
         const palaceNamesReverse = {"坎一宮(水)":1, "坤二宮(土)":2, "震三宮(木)":3, "巽四宮(木)":4, "乾六宮(金)":6, "兌七宮(金)":7, "艮八宮(土)":8, "離九宮(火)":9};
@@ -868,7 +1035,6 @@ function updatePreview() {
                 let parts = ganStr.split("/");
                 return parts.map(g => {
                     let tags = [];
-                    // 底圖中，僅標記天盤干的擊刑入墓，地盤保持純淨
                     if(checkState) {
                         if(isXing(pNum, g)) tags.push("刑");
                         if(isTomb(pNum, g)) tags.push("墓");
@@ -905,7 +1071,6 @@ function updatePreview() {
     let showCS = document.getElementById("toggleChangsheng").checked;
     let showAG = document.getElementById("toggleAngan").checked;
 
-    // 2. 將選中用神的表單資訊，覆蓋上去（取代原有底圖）
     document.querySelectorAll('#panelsContainer > .panel').forEach((p, idx) => {
         if(!p.dataset.godname) return;
         
@@ -916,7 +1081,6 @@ function updatePreview() {
             let contentDiv = cell.querySelector('.cell-content');
             if(!contentDiv) return;
 
-            // 移除全盤底色標籤，以免重複擁擠
             let baseBlock = contentDiv.querySelector('[data-base="true"]');
             if(baseBlock) baseBlock.remove();
             
@@ -930,7 +1094,10 @@ function updatePreview() {
                 door += `<span style="color:#ff3b30; font-size:10px;">(迫)</span>`;
             }
 
-            let tGansArr = Array.from(p.querySelectorAll('.tian-gan:checked')).map(x=>x.value);
+            let tGansArr = Array.from(p.querySelectorAll('.tian-gan:checked'))
+                                .sort((a, b) => (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0))
+                                .map(x=>x.value);
+                                
             let tHarm1ArrGrid = [];
             if(p.querySelector('.tian-jx-1') && p.querySelector('.tian-jx-1').checked) tHarm1ArrGrid.push("刑");
             if(p.querySelector('.tian-rm-1') && p.querySelector('.tian-rm-1').checked) tHarm1ArrGrid.push("墓");
@@ -962,7 +1129,10 @@ function updatePreview() {
                 tGansStr = `首:${jiaText}${csJiaStr}${tHarm1StrGrid}`;
             }
 
-            let dGansArr = Array.from(p.querySelectorAll('.di-gan:checked')).map(x=>x.value);
+            let dGansArr = Array.from(p.querySelectorAll('.di-gan:checked'))
+                                .sort((a, b) => (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0))
+                                .map(x=>x.value);
+                                
             let dHarm1ArrGrid = [];
             if(p.querySelector('.di-jx-1') && p.querySelector('.di-jx-1').checked) dHarm1ArrGrid.push("刑");
             if(p.querySelector('.di-rm-1') && p.querySelector('.di-rm-1').checked) dHarm1ArrGrid.push("墓");
@@ -986,7 +1156,9 @@ function updatePreview() {
             }
             let dGansStr = dGansDisplay.join("+");
 
-            let anGanCbs = Array.from(p.querySelectorAll(`input[name="ag_${idx}"]:checked`)).map(x=>x.value);
+            let anGanCbs = Array.from(p.querySelectorAll(`input[name="ag_${idx}"]:checked`))
+                                .sort((a, b) => (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0))
+                                .map(x=>x.value);
             let anGanStr = (showAG && anGanCbs.length > 0) ? `<span style="color:#007aff; font-weight:bold;">(${anGanCbs.join("+")})</span>` : "";
 
             let gansDisplay = "";
