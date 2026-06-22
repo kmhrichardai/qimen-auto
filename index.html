@@ -54,7 +54,7 @@
     }
     .panel-title { font-size: 18px; font-weight: 700; color: var(--primary); margin: 0; }
     
-    /* 輸入框統一優化 */
+    /* 輸入框統一優化 (強制消除瀏覽器預設外距) */
     select, .datetime-input { 
         width: 100%; 
         height: 46px;
@@ -63,7 +63,7 @@
         border-radius: 10px; 
         border: 1.5px solid var(--input-border); 
         background: #fafafa; 
-        margin-top: 0; 
+        margin: 0; /* 嚴格歸零，防止異常空隙 */
         -webkit-appearance: none; appearance: none; 
         box-sizing: border-box; 
         transition: all 0.2s ease;
@@ -77,20 +77,16 @@
         outline: none;
     }
 
-    /* --- 時間排版區塊徹底重構 (解決 Chrome 縮排與空隙問題) --- */
+    /* --- 時間排版區塊徹底重構 (改用 CSS Grid 解決 Chrome 異常拉伸與空隙) --- */
     .time-input-container {
-        display: flex;
-        flex-direction: column; /* 手機優先：直向排列 */
-        gap: 12px; /* 統一間距 */
+        display: grid;
+        grid-template-columns: 1fr; /* 手機優先：單列直向網格 */
+        gap: 12px; /* 鎖定間距，絕不拉伸 */
         margin-top: 12px;
-        margin-bottom: 8px;
-    }
-    .time-input-container > input[type="date"] {
-        width: 100%;
+        margin-bottom: 15px;
     }
     .time-input-parts {
         display: flex;
-        flex-direction: row;
         align-items: center;
         gap: 10px;
         width: 100%;
@@ -98,23 +94,18 @@
     .time-input-parts > input {
         flex: 1; /* 均分剩餘空間 */
         text-align: center;
+        min-width: 0; /* 防止輸入框文字過長撐破容器 */
     }
     .time-input-parts > span {
         font-weight: 600;
         color: var(--text-main);
-        flex-shrink: 0; /* 防止文字被擠壓 */
+        flex-shrink: 0; 
     }
 
-    /* 電腦/平板版：橫向排列 */
+    /* 電腦/平板版：雙列橫向網格 */
     @media (min-width: 500px) {
         .time-input-container {
-            flex-direction: row;
-        }
-        .time-input-container > input[type="date"] {
-            flex: 1.5;
-        }
-        .time-input-parts {
-            flex: 1;
+            grid-template-columns: 1.5fr 1fr; /* 左側日期佔比大一點 */
         }
     }
     /* ---------------------------------------------------- */
@@ -204,9 +195,9 @@
     .inner-copy-btn, .auto-plot-btn { 
         width: 100%; padding: 14px; font-size: 16px; font-weight: bold; 
         border: none; border-radius: 12px; cursor: pointer; transition: 0.2s; 
-        -webkit-tap-highlight-color: transparent; margin-top: 12px;
+        -webkit-tap-highlight-color: transparent; margin-top: 8px; /* 修改這裡控制按鈕上方間距 */
     }
-    .inner-copy-btn { background: var(--success); color: #fff; box-shadow: 0 4px 10px rgba(52, 199, 89, 0.2); }
+    .inner-copy-btn { background: var(--success); color: #fff; box-shadow: 0 4px 10px rgba(52, 199, 89, 0.2); margin-top: 12px; }
     .inner-copy-btn:active { background: var(--success-dark); transform: scale(0.98); }
     
     .auto-plot-btn { background: linear-gradient(135deg, #ff9f0a, #ff8a00); color: #fff; box-shadow: 0 4px 10px rgba(255, 149, 0, 0.25); }
