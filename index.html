@@ -54,8 +54,19 @@
     /* 中宮特別視覺樣式 */
     #cell_陰盤\(無中\) { background: #f2f2f7; justify-content: center; color: #8e8e93; font-weight: bold; overflow: hidden; }
 
+    /* 時間區塊響應式調整 - 增強跨瀏覽器相容性 */
+    .time-input-container { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+    .time-input-container > input[type="date"] { flex: 1 1 180px; min-width: 150px; margin-top: 0; }
+    .time-input-parts { display: flex; flex: 1 1 150px; gap: 6px; align-items: center; }
+    .time-input-parts > input { flex: 1; margin-top: 0; text-align: center; padding: 12px 4px; }
+    .time-input-parts > span { font-weight: bold; color: #3a3a3c; white-space: nowrap; margin: 0 2px; }
+
     /* --- 手機端適應度優化 --- */
-    @media (max-width: 400px) {
+    @media (max-width: 500px) {
+        .time-input-container { flex-direction: column; align-items: stretch; }
+        .time-input-container > input[type="date"] { width: 100%; flex: auto; }
+        .time-input-parts { width: 100%; }
+        
         .jiugong-cell { min-height: 110px; padding: 4px; }
         .cell-title { font-size: 11px; padding-bottom: 2px; margin-bottom: 3px; }
         .cell-content { font-size: 10px; line-height: 1.25; }
@@ -90,14 +101,14 @@
     </div>
     <div id="timeInputGroup" style="display:block; margin-bottom: 15px;">
         
-        <div style="display: flex; gap: 8px; align-items: center; margin-top: 8px;">
-            <input type="date" id="qimenDate" class="datetime-input" style="flex: 2; margin-top: 0;" onchange="updatePreview()">
-            
-            <input type="number" id="qimenHour" class="datetime-input" min="0" max="23" placeholder="00" style="flex: 1; margin-top: 0; text-align: center; padding-right: 12px;" onchange="validateAndPadTime(this, 23); updatePreview()">
-            <span style="font-weight: bold; color: #3a3a3c; margin: 0 2px;">時</span>
-            
-            <input type="number" id="qimenMinute" class="datetime-input" min="0" max="59" placeholder="00" style="flex: 1; margin-top: 0; text-align: center; padding-right: 12px;" onchange="validateAndPadTime(this, 59); updatePreview()">
-            <span style="font-weight: bold; color: #3a3a3c; margin: 0 2px;">分</span>
+        <div class="time-input-container">
+            <input type="date" id="qimenDate" class="datetime-input" onchange="updatePreview()">
+            <div class="time-input-parts">
+                <input type="number" id="qimenHour" class="datetime-input" min="0" max="23" placeholder="00" onchange="validateAndPadTime(this, 23); updatePreview()">
+                <span>時</span>
+                <input type="number" id="qimenMinute" class="datetime-input" min="0" max="59" placeholder="00" onchange="validateAndPadTime(this, 59); updatePreview()">
+                <span>分</span>
+            </div>
         </div>
 
         <button class="auto-plot-btn" onclick="autoPlotAndFill()">⚡ 自動排盤 & 帶入所問事</button>
