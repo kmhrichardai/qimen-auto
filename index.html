@@ -8,86 +8,229 @@
 <script src="https://unpkg.com/lunar-javascript/lunar.js"></script>
 
 <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f2f2f7; padding: 15px; margin: 0; padding-bottom: 120px; color: #1c1c1e; }
-    h2 { font-size: 20px; color: #000; margin-top: 5px; }
-    .top-bar { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 1px 5px rgba(0,0,0,0.05); }
-    select, .datetime-input { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #c7c7cc; background: #fff; margin-top: 8px; -webkit-appearance: none; appearance: none; box-sizing: border-box; }
-    .datetime-input { font-family: inherit; }
-    .panel { background: #fff; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 1px 5px rgba(0,0,0,0.05); }
+    /* 全局現代化基礎設定 */
+    :root {
+        --primary: #007aff;
+        --primary-dark: #0056b3;
+        --success: #34c759;
+        --success-dark: #28a745;
+        --warning: #ff9500;
+        --warning-dark: #e68a00;
+        --danger: #ff3b30;
+        --danger-dark: #d32f2f;
+        --bg-color: #f2f2f7;
+        --card-bg: #ffffff;
+        --text-main: #1c1c1e;
+        --text-muted: #8e8e93;
+        --border-color: #e5e5ea;
+        --input-border: #c7c7cc;
+    }
+
+    body { 
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+        background: var(--bg-color); 
+        padding: 15px; 
+        margin: 0; 
+        padding-bottom: 120px; 
+        color: var(--text-main); 
+    }
     
-    .panel-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e5ea; padding-bottom: 8px; margin-bottom: 12px; }
-    .panel-title { font-size: 18px; font-weight: bold; color: #007aff; margin: 0; }
-    .copy-tool { display: flex; align-items: center; gap: 5px; font-size: 13px; color: #8e8e93; }
-    .copy-tool select { width: auto; padding: 5px 25px 5px 10px; font-size: 13px; margin-top: 0; border-radius: 6px; background: #f2f2f7; }
+    h2 { font-size: 22px; color: #000; margin-top: 5px; font-weight: 800; letter-spacing: 0.5px; }
     
-    .form-group { margin-bottom: 15px; }
-    .form-group label.title { display: block; font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #3a3a3c; }
+    /* 卡片模組化設計 */
+    .top-bar, .panel { 
+        background: var(--card-bg); 
+        padding: 18px; 
+        border-radius: 16px; 
+        margin-bottom: 15px; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02); 
+        border: 1px solid rgba(0,0,0,0.02);
+    }
+    
+    .panel-header { 
+        display: flex; justify-content: space-between; align-items: center; 
+        border-bottom: 1px solid var(--border-color); 
+        padding-bottom: 10px; margin-bottom: 15px; 
+    }
+    .panel-title { font-size: 18px; font-weight: 700; color: var(--primary); margin: 0; }
+    
+    /* 輸入框統一優化 */
+    select, .datetime-input { 
+        width: 100%; 
+        height: 46px;
+        padding: 0 14px; 
+        font-size: 16px; 
+        border-radius: 10px; 
+        border: 1.5px solid var(--input-border); 
+        background: #fafafa; 
+        margin-top: 0; 
+        -webkit-appearance: none; appearance: none; 
+        box-sizing: border-box; 
+        transition: all 0.2s ease;
+        color: var(--text-main);
+        font-family: inherit;
+    }
+    select:focus, .datetime-input:focus {
+        border-color: var(--primary);
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(0,122,255,0.15);
+        outline: none;
+    }
+
+    /* --- 時間排版區塊徹底重構 (解決 Chrome 縮排與空隙問題) --- */
+    .time-input-container {
+        display: flex;
+        flex-direction: column; /* 手機優先：直向排列 */
+        gap: 12px; /* 統一間距 */
+        margin-top: 12px;
+        margin-bottom: 8px;
+    }
+    .time-input-container > input[type="date"] {
+        width: 100%;
+    }
+    .time-input-parts {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+    .time-input-parts > input {
+        flex: 1; /* 均分剩餘空間 */
+        text-align: center;
+    }
+    .time-input-parts > span {
+        font-weight: 600;
+        color: var(--text-main);
+        flex-shrink: 0; /* 防止文字被擠壓 */
+    }
+
+    /* 電腦/平板版：橫向排列 */
+    @media (min-width: 500px) {
+        .time-input-container {
+            flex-direction: row;
+        }
+        .time-input-container > input[type="date"] {
+            flex: 1.5;
+        }
+        .time-input-parts {
+            flex: 1;
+        }
+    }
+    /* ---------------------------------------------------- */
+
+    /* 表單與按鈕選項設計 */
+    .form-group { margin-bottom: 18px; }
+    .form-group label.title { display: block; font-size: 15px; font-weight: 700; margin-bottom: 10px; color: #3a3a3c; }
+    
     .grid-5, .grid-4 { display: grid; gap: 8px; }
     .grid-5 { grid-template-columns: repeat(5, 1fr); }
     .grid-4 { grid-template-columns: repeat(4, 1fr); }
-    .btn-check { display: flex; align-items: center; justify-content: center; background: #f2f2f7; border: 1px solid #d1d1d6; border-radius: 6px; padding: 10px 0; font-size: 14px; color: #1c1c1e; transition: 0.2s; user-select: none; text-align: center; -webkit-tap-highlight-color: transparent; }
+    
+    .btn-check { 
+        display: flex; align-items: center; justify-content: center; 
+        background: var(--bg-color); 
+        border: 1.5px solid transparent; 
+        border-radius: 10px; 
+        padding: 10px 0; 
+        font-size: 14px; font-weight: 600;
+        color: var(--text-muted); 
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+        user-select: none; text-align: center; 
+        -webkit-tap-highlight-color: transparent; 
+    }
     input[type="checkbox"], input[type="radio"] { display: none; }
     
-    input[type="checkbox"]:checked + .btn-check, input[type="radio"]:checked + .btn-check { background: #007aff; color: #fff !important; border-color: #007aff; font-weight: bold; }
+    input[type="checkbox"]:checked + .btn-check, input[type="radio"]:checked + .btn-check { 
+        background: #e5f1ff; 
+        color: var(--primary) !important; 
+        border-color: var(--primary); 
+        font-weight: 700; 
+    }
     input[type="checkbox"]:disabled + .btn-check { opacity: 0.5; }
     
     .harm-group { display: flex; gap: 10px; margin-top: 8px; }
     .harm-group label { flex: 1; }
-    .select-container { position: relative; }
-    .select-container::after { content: "▼"; font-size: 12px; color: #8e8e93; position: absolute; right: 12px; top: 18px; pointer-events: none; }
-    .panel-header .select-container::after { top: 10px; right: 8px; font-size: 10px; }
     
-    textarea#previewArea { width: 100%; height: 250px; padding: 12px; font-family: monospace; font-size: 14px; border-radius: 8px; border: 1px solid #c7c7cc; background: #fafafa; color: #333; box-sizing: border-box; resize: none; margin-top: 8px; }
+    .select-container { position: relative; }
+    .select-container::after { content: "▼"; font-size: 12px; color: var(--text-muted); position: absolute; right: 14px; top: 15px; pointer-events: none; }
     
     /* 九宮格主體優化 */
-    .jiugong-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; background: #c7c7cc; border: 2px solid #8e8e93; border-radius: 8px; margin-top: 10px; align-items: stretch; }
-    .jiugong-cell { background: #fff; min-height: 130px; max-height: 180px; height: 100%; padding: 6px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; box-sizing: border-box; overflow-y: auto; }
-    .cell-title { font-size: 12px; font-weight: bold; color: #8e8e93; border-bottom: 1px dashed #e5e5ea; width: 100%; text-align: center; padding-bottom: 3px; margin-bottom: 5px; background: #f2f2f7; flex-shrink: 0; }
-    .cell-content { font-size: 11px; width: 100%; text-align: left; line-height: 1.4; color: #1c1c1e; word-wrap: break-word; flex-grow: 1; }
-    .cell-god-tag { background: #e1f5fe; color: #0288d1; padding: 1px 4px; border-radius: 3px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 2px; border: 1px solid #b3e5fc; }
+    .jiugong-grid { 
+        display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; 
+        background: #d1d1d6; border: 3px solid #d1d1d6; border-radius: 12px; 
+        margin-top: 12px; align-items: stretch; overflow: hidden;
+    }
+    .jiugong-cell { 
+        background: #fff; min-height: 140px; max-height: 200px; height: 100%; 
+        padding: 8px; display: flex; flex-direction: column; 
+        justify-content: flex-start; align-items: center; 
+        box-sizing: border-box; overflow-y: auto; 
+    }
+    .cell-title { 
+        font-size: 13px; font-weight: 800; color: var(--text-muted); 
+        border-bottom: 2px solid var(--bg-color); width: 100%; 
+        text-align: center; padding-bottom: 4px; margin-bottom: 6px; 
+        flex-shrink: 0; 
+    }
+    .cell-content { font-size: 12px; width: 100%; text-align: left; line-height: 1.4; color: var(--text-main); word-wrap: break-word; flex-grow: 1; }
+    .cell-god-tag { background: #e1f5fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 4px; }
 
-    .god-info-block { margin-bottom: 6px; border-left: 3px solid #007aff; padding-left: 4px; padding-bottom: 4px; border-bottom: 1px solid #e5e5ea; }
-    .god-info-block:last-child { border-bottom: none; margin-bottom: 0; }
-    .god-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; font-size: 11px; }
-    .god-info-gan { margin-top: 2px; font-size: 11px; }
+    .god-info-block { margin-bottom: 8px; border-left: 3px solid var(--primary); padding-left: 6px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color); }
+    .god-info-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .god-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; font-size: 11.5px; }
+    .god-info-gan { margin-top: 4px; font-size: 11.5px; }
 
-    /* 中宮特別視覺樣式 */
-    #cell_陰盤\(無中\) { background: #f2f2f7; justify-content: center; color: #8e8e93; font-weight: bold; overflow: hidden; }
+    #cell_陰盤\(無中\) { background: #f9f9f9; justify-content: center; color: var(--text-muted); font-weight: bold; }
 
-    /* 時間區塊響應式調整 - 增強跨瀏覽器相容性 */
-    .time-input-container { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
-    .time-input-container > input[type="date"] { flex: 1 1 180px; min-width: 150px; margin-top: 0; }
-    .time-input-parts { display: flex; flex: 1 1 150px; gap: 6px; align-items: center; }
-    .time-input-parts > input { flex: 1; margin-top: 0; text-align: center; padding: 12px 4px; }
-    .time-input-parts > span { font-weight: bold; color: #3a3a3c; white-space: nowrap; margin: 0 2px; }
-
-    /* --- 手機端適應度優化 --- */
-    @media (max-width: 500px) {
-        .time-input-container { flex-direction: column; align-items: stretch; }
-        .time-input-container > input[type="date"] { width: 100%; flex: auto; }
-        .time-input-parts { width: 100%; }
-        
-        .jiugong-cell { min-height: 110px; padding: 4px; }
-        .cell-title { font-size: 11px; padding-bottom: 2px; margin-bottom: 3px; }
-        .cell-content { font-size: 10px; line-height: 1.25; }
-        .cell-god-tag { font-size: 10px; padding: 1px 2px; margin-bottom: 1px; }
-        
-        .god-info-block { margin-bottom: 4px; padding-left: 3px; padding-bottom: 2px; }
-        .god-info-grid { font-size: 10px; gap: 1px; letter-spacing: -0.3px; }
-        .god-info-gan { font-size: 10px; margin-top: 1px; letter-spacing: -0.3px; }
+    textarea#previewArea { 
+        width: 100%; height: 250px; padding: 14px; font-family: monospace; font-size: 14px; 
+        border-radius: 12px; border: 1.5px solid var(--input-border); background: #fafafa; 
+        color: #333; box-sizing: border-box; resize: none; margin-top: 10px; 
     }
 
-    .inner-copy-btn { width: 100%; margin-top: 12px; background: #34c759; color: #fff; padding: 10px; font-size: 15px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
-    .inner-copy-btn:active { background: #28a745; }
-    .auto-plot-btn { width: 100%; padding: 14px; background: #ff9500; color: #fff; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin-top: 8px; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
-    .auto-plot-btn:active { background: #e68a00; }
+    /* 手機端極端尺寸微調 */
+    @media (max-width: 400px) {
+        .jiugong-cell { min-height: 115px; padding: 5px; }
+        .cell-title { font-size: 12px; padding-bottom: 3px; margin-bottom: 4px; }
+        .cell-content { font-size: 11px; line-height: 1.3; }
+        .god-info-grid { font-size: 10.5px; gap: 1px; letter-spacing: -0.2px; }
+        .god-info-gan { font-size: 10.5px; margin-top: 2px; }
+        .grid-5 { gap: 6px; }
+        .grid-4 { gap: 6px; }
+    }
 
-    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); padding: 15px 20px; border-top: 1px solid #e5e5ea; display: flex; gap: 15px; z-index: 100; padding-bottom: max(15px, env(safe-area-inset-bottom)); }
-    .bottom-bar button { flex: 1; padding: 14px; font-size: 16px; font-weight: bold; border-radius: 12px; border: none; cursor: pointer; transition: 0.2s; -webkit-tap-highlight-color: transparent; }
-    .btn-clear { background: #ff3b30; color: #fff; }
-    .btn-clear:active { background: #d32f2f; }
-    .btn-copy { background: #34c759; color: #fff; }
-    .btn-copy:active { background: #28a745; }
+    /* 操作按鈕美化 */
+    .inner-copy-btn, .auto-plot-btn { 
+        width: 100%; padding: 14px; font-size: 16px; font-weight: bold; 
+        border: none; border-radius: 12px; cursor: pointer; transition: 0.2s; 
+        -webkit-tap-highlight-color: transparent; margin-top: 12px;
+    }
+    .inner-copy-btn { background: var(--success); color: #fff; box-shadow: 0 4px 10px rgba(52, 199, 89, 0.2); }
+    .inner-copy-btn:active { background: var(--success-dark); transform: scale(0.98); }
+    
+    .auto-plot-btn { background: linear-gradient(135deg, #ff9f0a, #ff8a00); color: #fff; box-shadow: 0 4px 10px rgba(255, 149, 0, 0.25); }
+    .auto-plot-btn:active { background: var(--warning-dark); transform: scale(0.98); }
+
+    .copy-tool select { width: auto; padding: 6px 28px 6px 12px; font-size: 13px; height: 32px; border-radius: 8px; border: none; background: var(--bg-color); color: var(--text-main); font-weight: 600; }
+    .panel-header .select-container::after { top: 9px; right: 10px; font-size: 10px; color: var(--text-main); }
+
+    .bottom-bar { 
+        position: fixed; bottom: 0; left: 0; right: 0; 
+        background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        padding: 15px 20px; border-top: 1px solid rgba(0,0,0,0.08); 
+        display: flex; gap: 15px; z-index: 100; 
+        padding-bottom: max(15px, env(safe-area-inset-bottom)); 
+    }
+    .bottom-bar button { 
+        flex: 1; padding: 14px; font-size: 16px; font-weight: 700; 
+        border-radius: 12px; border: none; cursor: pointer; transition: 0.2s; 
+        -webkit-tap-highlight-color: transparent; 
+    }
+    .btn-clear { background: #ffebee; color: var(--danger); }
+    .btn-clear:active { background: #ffcdd2; transform: scale(0.98); }
+    .btn-copy { background: var(--success); color: #fff; box-shadow: 0 4px 10px rgba(52, 199, 89, 0.2); }
+    .btn-copy:active { background: var(--success-dark); transform: scale(0.98); }
 </style>
 </head>
 <body>
@@ -95,11 +238,11 @@
 <div class="top-bar">
     <h2>奇門遁甲 - AI問事輸入板</h2>
     
-    <label style="font-weight:bold; color:#ff3b30;">0. 時間與四柱排盤 (選填)：</label>
-    <div class="harm-group" style="margin-top:8px; margin-bottom: 10px;">
-        <label><input type="checkbox" id="useTimeInfo" checked onchange="toggleTimeInput(); updatePreview()"><div class="btn-check">加入開盤時間與四柱</div></label>
+    <label style="font-weight:bold; color:var(--danger); font-size: 15px;">0. 時間與四柱排盤 (選填)：</label>
+    <div class="harm-group" style="margin-top:10px; margin-bottom: 12px;">
+        <label><input type="checkbox" id="useTimeInfo" checked onchange="toggleTimeInput(); updatePreview()"><div class="btn-check" style="background:#fff; border-color:var(--danger); color:var(--danger);">加入開盤時間與四柱</div></label>
     </div>
-    <div id="timeInputGroup" style="display:block; margin-bottom: 15px;">
+    <div id="timeInputGroup" style="display:block; margin-bottom: 18px;">
         
         <div class="time-input-container">
             <input type="date" id="qimenDate" class="datetime-input" onchange="updatePreview()">
@@ -112,11 +255,11 @@
         </div>
 
         <button class="auto-plot-btn" onclick="autoPlotAndFill()">⚡ 自動排盤 & 帶入所問事</button>
-        <div style="font-size:12px; color:#8e8e93; margin-top:6px;">系統將依據此時間與選擇主題，自動推算陰盤全盤並標註用神。</div>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:8px; line-height: 1.4;">系統將依據此時間與選擇主題，自動推算陰盤全盤並標註用神。</div>
     </div>
 
-    <label style="font-weight:bold; color:#007aff;">1. 設定排盤基礎 (手動/自動連動)：</label>
-    <div style="display:flex; gap:10px; margin-top:8px; margin-bottom: 15px;">
+    <label style="font-weight:bold; color:var(--primary); font-size: 15px;">1. 設定排盤基礎 (手動/自動連動)：</label>
+    <div style="display:flex; gap:12px; margin-top:10px; margin-bottom: 18px;">
         <div class="select-container" style="flex:1;">
             <select id="dunType" onchange="autoUpdateAllAnGans(); updatePreview()">
                 <option value="yang">陽遁</option>
@@ -132,13 +275,13 @@
         </div>
     </div>
     
-    <label style="font-weight:bold;">2. 選擇問事主題：</label>
-    <div class="select-container" style="margin-bottom: 15px;">
+    <label style="font-weight:bold; font-size: 15px;">2. 選擇問事主題：</label>
+    <div class="select-container" style="margin-top: 10px; margin-bottom: 18px;">
         <select id="topicSelect" onchange="renderPanels()"></select>
     </div>
 
-    <label style="font-weight:bold; color:#ff9500;">3. 顯示進階資訊：</label>
-    <div class="harm-group" style="margin-top:8px;">
+    <label style="font-weight:bold; color:var(--warning); font-size: 15px;">3. 顯示進階資訊：</label>
+    <div class="harm-group" style="margin-top:10px;">
         <label><input type="checkbox" id="toggleChangsheng" checked onchange="updatePreview()"><div class="btn-check">12長生標記</div></label>
         <label><input type="checkbox" id="toggleAngan" checked onchange="toggleAnganDisplay(); updatePreview()"><div class="btn-check">暗干系統</div></label>
     </div>
@@ -154,7 +297,7 @@
         <div class="jiugong-cell" id="cell_坤二宮(土)"><div class="cell-title">坤二宮(土)</div><div class="cell-content"></div></div>
         
         <div class="jiugong-cell" id="cell_震三宮(木)"><div class="cell-title">震三宮(木)</div><div class="cell-content"></div></div>
-        <div class="jiugong-cell" id="cell_陰盤(無中)"><div class="cell-title">中宮</div><div class="cell-content" style="text-align:center; display:flex; align-items:center; justify-content:center; color:#8e8e93;">陰盤無中</div></div>
+        <div class="jiugong-cell" id="cell_陰盤(無中)"><div class="cell-title">中宮</div><div class="cell-content" style="text-align:center; display:flex; align-items:center; justify-content:center; color:var(--text-muted);">陰盤無中</div></div>
         <div class="jiugong-cell" id="cell_兌七宮(金)"><div class="cell-title">兌七宮(金)</div><div class="cell-content"></div></div>
         
         <div class="jiugong-cell" id="cell_艮八宮(土)"><div class="cell-title">艮八宮(土)</div><div class="cell-content"></div></div>
@@ -746,22 +889,22 @@ function renderPanels() {
         html += `<div class="form-group"><label class="title">3. 天盤天干 (最多2項)</label><div class="grid-5">`;
         tiangan.forEach(t => { html += `<label><input type="checkbox" class="tian-gan" value="${t}" onchange="checkLimit(this, 'tian-gan')"><div class="btn-check">${t}</div></label>`; });
         html += `</div><div class="grid-4" style="margin-top:8px;">
-            <label><input type="checkbox" class="tian-jx-1" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">首干[擊刑]</div></label>
-            <label><input type="checkbox" class="tian-rm-1" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">首干[入墓]</div></label>
-            <label><input type="checkbox" class="tian-jx-2" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">次干[擊刑]</div></label>
-            <label><input type="checkbox" class="tian-rm-2" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">次干[入墓]</div></label>
+            <label><input type="checkbox" class="tian-jx-1" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">首干[擊刑]</div></label>
+            <label><input type="checkbox" class="tian-rm-1" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">首干[入墓]</div></label>
+            <label><input type="checkbox" class="tian-jx-2" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">次干[擊刑]</div></label>
+            <label><input type="checkbox" class="tian-rm-2" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">次干[入墓]</div></label>
         </div></div>`;
 
         html += `<div class="form-group"><label class="title">4. 地盤天干 (最多2項)</label><div class="grid-5">`;
         tiangan.forEach(t => { html += `<label><input type="checkbox" class="di-gan" value="${t}" onchange="checkLimit(this, 'di-gan')"><div class="btn-check">${t}</div></label>`; });
         html += `</div><div class="grid-4" style="margin-top:8px;">
-            <label><input type="checkbox" class="di-jx-1" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">首干[擊刑]</div></label>
-            <label><input type="checkbox" class="di-rm-1" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">首干[入墓]</div></label>
-            <label><input type="checkbox" class="di-jx-2" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">次干[擊刑]</div></label>
-            <label><input type="checkbox" class="di-rm-2" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:#27ae60;">次干[入墓]</div></label>
+            <label><input type="checkbox" class="di-jx-1" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">首干[擊刑]</div></label>
+            <label><input type="checkbox" class="di-rm-1" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">首干[入墓]</div></label>
+            <label><input type="checkbox" class="di-jx-2" value="擊刑" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">次干[擊刑]</div></label>
+            <label><input type="checkbox" class="di-rm-2" value="入墓" onchange="updatePreview()"><div class="btn-check" style="font-size:13px; color:var(--success-dark);">次干[入墓]</div></label>
         </div></div>`;
 
-        html += `<div class="form-group angan-group"><label class="title" style="color:#007aff;">5. 暗干 (最多支援2項，選好排盤條件後自動算出)</label><div class="grid-5">`;
+        html += `<div class="form-group angan-group"><label class="title" style="color:var(--primary);">5. 暗干 (最多支援2項，選好排盤條件後自動算出)</label><div class="grid-5">`;
         tiangan.forEach(t => { html += `<label><input type="checkbox" class="an-gan-cb" name="ag_${idx}" value="${t}" onchange="checkLimit(this, 'an-gan-cb'); updatePreview()"><div class="btn-check">${t}</div></label>`; });
         html += `</div></div>`;
 
@@ -1056,24 +1199,24 @@ function updatePreview() {
 
             let tGansStr = formatGans(tCell.gan, true);
             let dGansStr = formatGans(diPan[pNum], false);
-            let anGanStr = `<span style="color:#007aff; font-weight:bold;">(${tCell.anGan.split("/").join("+")})</span>`;
-            let gansDisplay = `<span style="color:#ff3b30; font-weight:bold;">${tGansStr || '-'}</span>/<span style="color:#8e8e93;">${dGansStr || '-'}</span> ${anGanStr}`;
+            let anGanStr = `<span style="color:var(--primary); font-weight:bold;">(${tCell.anGan.split("/").join("+")})</span>`;
+            let gansDisplay = `<span style="color:var(--danger); font-weight:bold;">${tGansStr || '-'}</span>/<span style="color:var(--text-muted);">${dGansStr || '-'}</span> ${anGanStr}`;
 
             let doorDisplay = tCell.door.substring(0,2);
             if(isMenPo(tCell.door, pNum)) {
-                doorDisplay += `<span style="color:#ff3b30; font-size:10px;">(迫)</span>`;
+                doorDisplay += `<span style="color:var(--danger); font-size:10px;">(迫)</span>`;
             }
 
             let infoStr = `
-            <div class="god-info-block" style="border-left-color: #c7c7cc; opacity: 0.65; margin-bottom: 2px;" data-base="true">
-                <span class="cell-god-tag" style="background:#f2f2f7; color:#8e8e93; border-color:#d1d1d6; font-weight:normal;">全盤${specStr}</span><br>
-                <div class="god-info-grid" style="color: #666;">
-                    <div>神: <span style="color:#ff9500; font-weight:bold;">${tCell.god || '-'}</span></div>
-                    <div>地神: <span style="color:#8e8e93;">${tCell.diGod || '-'}</span></div>
+            <div class="god-info-block" style="border-left-color: #c7c7cc; opacity: 0.7;" data-base="true">
+                <span class="cell-god-tag" style="background:var(--bg-color); color:var(--text-muted); border:1px solid var(--input-border); font-weight:normal;">全盤${specStr}</span><br>
+                <div class="god-info-grid" style="color: #555;">
+                    <div>神: <span style="color:var(--warning); font-weight:bold;">${tCell.god || '-'}</span></div>
+                    <div>地神: <span style="color:var(--text-muted);">${tCell.diGod || '-'}</span></div>
                     <div>星: <span>${tCell.star.substring(0,2) || '-'}</span></div>
-                    <div>門: <span style="color:#34c759; font-weight:bold;">${doorDisplay || '-'}</span></div>
+                    <div>門: <span style="color:var(--success-dark); font-weight:bold;">${doorDisplay || '-'}</span></div>
                 </div>
-                <div class="god-info-gan" style="filter: grayscale(40%);">干: ${gansDisplay}</div>
+                <div class="god-info-gan" style="filter: grayscale(20%);">干: ${gansDisplay}</div>
             </div>`;
             contentDiv.innerHTML = infoStr;
         });
@@ -1102,7 +1245,7 @@ function updatePreview() {
             let star = p.querySelector(`input[name="star_${idx}"]:checked`) ? p.querySelector(`input[name="star_${idx}"]:checked`).value.substring(0,2) : "";
             let door = p.querySelector(`input[name="door_${idx}"]:checked`) ? p.querySelector(`input[name="door_${idx}"]:checked`).value.substring(0,2) : "";
             if (door && p.querySelector('.door-mp') && p.querySelector('.door-mp').checked) {
-                door += `<span style="color:#ff3b30; font-size:10px;">(迫)</span>`;
+                door += `<span style="color:var(--danger); font-size:10px;">(迫)</span>`;
             }
 
             let tGansArr = Array.from(p.querySelectorAll('.tian-gan:checked'))
@@ -1170,11 +1313,11 @@ function updatePreview() {
             let anGanCbs = Array.from(p.querySelectorAll(`input[name="ag_${idx}"]:checked`))
                                 .sort((a, b) => (Number(a.dataset.order) || 0) - (Number(b.dataset.order) || 0))
                                 .map(x=>x.value);
-            let anGanStr = (showAG && anGanCbs.length > 0) ? `<span style="color:#007aff; font-weight:bold;">(${anGanCbs.join("+")})</span>` : "";
+            let anGanStr = (showAG && anGanCbs.length > 0) ? `<span style="color:var(--primary); font-weight:bold;">(${anGanCbs.join("+")})</span>` : "";
 
             let gansDisplay = "";
             if (tGansStr || dGansStr) {
-                gansDisplay = `<span style="color:#ff3b30; font-weight:bold;">${tGansStr || '-'}</span>/<span style="color:#8e8e93;">${dGansStr || '-'}</span> ${anGanStr}`;
+                gansDisplay = `<span style="color:var(--danger); font-weight:bold;">${tGansStr || '-'}</span>/<span style="color:var(--text-muted);">${dGansStr || '-'}</span> ${anGanStr}`;
             } else if (anGanStr) {
                 gansDisplay = `暗:${anGanStr}`;
             }
@@ -1188,10 +1331,10 @@ function updatePreview() {
             <div class="god-info-block">
                 <span class="cell-god-tag">${godShort}${specStr}</span><br>
                 <div class="god-info-grid">
-                    <div>神: <span style="color:#ff9500; font-weight:bold;">${tGod || '-'}</span></div>
-                    <div>地神: <span style="color:#8e8e93;">${dGod || '-'}</span></div>
+                    <div>神: <span style="color:var(--warning); font-weight:bold;">${tGod || '-'}</span></div>
+                    <div>地神: <span style="color:var(--text-muted);">${dGod || '-'}</span></div>
                     <div>星: <span>${star || '-'}</span></div>
-                    <div>門: <span style="color:#34c759; font-weight:bold;">${door || '-'}</span></div>
+                    <div>門: <span style="color:var(--success-dark); font-weight:bold;">${door || '-'}</span></div>
                 </div>
                 <div class="god-info-gan">干: ${gansDisplay}</div>
             </div>`;
@@ -1239,18 +1382,18 @@ function showSuccessState() {
     let innerBtn = document.getElementById("innerCopyBtn");
     
     btn.innerText = "✅ 已複製！";
-    btn.style.background = "#007aff";
+    btn.style.background = "var(--primary)";
     if(innerBtn) {
         innerBtn.innerText = "✅ 已複製盤面文本！";
-        innerBtn.style.background = "#007aff";
+        innerBtn.style.background = "var(--primary)";
     }
     
     setTimeout(() => { 
         btn.innerText = "複製文本"; 
-        btn.style.background = "#34c759";
+        btn.style.background = "var(--success)";
         if(innerBtn) {
             innerBtn.innerText = "複製盤面文本";
-            innerBtn.style.background = "#34c759";
+            innerBtn.style.background = "var(--success)";
         }
     }, 2000);
 }
